@@ -9,6 +9,7 @@ using namespace std;
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 
 struct msg {
     int iFrom; /* who sent the message (0 .. number-of-threads) */
@@ -26,8 +27,60 @@ sem_t *sems;
 #define REPLY 2
 int MAXTHREAD;
 
+void sendMsg(int iTo, struct msg &Msg){
+    if(mailboxes[iTo].cnt == 0){  // New message so block
+        sem_wait(&sems[iTo]);
+    } else { // Old Message so replace
+        cout << iTo;
+        Msg.cnt = 0;
+        mailboxes[iTo] = Msg;
+        sem_post(&sems[iTo]);
+    }
+}
+
+void recvMsg(int iRecv, struct msg &Msg){
+    if(mailboxes[iRecv].cnt != 0){ // Old message so empty mailbox
+        sem_wait(&sems[iRecv]);
+    }else { // New message so receive and mark as old
+        Msg.value = mailboxes[iRecv].value;
+        mailboxes[iRecv] = Msg;
+        mailboxes[iRecv].cnt = 1;
+        //sem_post(&sems[iRecv]);
+    }
+}
+
+void* adder(void* arg){
+    int id = (long) arg;
+    int sum = 0;
+    int numOps = 0;
+//    cout << "init";
+//    cout.flush();
+    sem_wait(&sems[id]); // wait till signalled
+    while(true){
+        cout << "posted";
+        cout.flush();
+        msg newMsg;
+        recvMsg(id, newMsg);
+        cout << "received";
+        cout.flush();
+        cout.flush();
+        if(newMsg.value >= 0) {
+            sum += newMsg.value;
+            numOps++;
+            cout << "sum: " << sum;
+            sleep(1);
+        } else {
+            cout << "The result from thread " << id << " is " << sum << " from " << numOps << " operations during " << time(NULL) << " secs.";
+            exit(0);
+        }
+    }
+}
 
 void initMailboxes(){
+    for(int i = 1; i < MAXTHREAD+1; i++){
+        mailboxes[i].cnt = 1;
+    }
+
     for(int i = 1; i < MAXTHREAD+1; i++){
         if (sem_init(&sems[i], 0, 0) < 0) {
             perror("sem_init");
@@ -43,41 +96,10 @@ void initMailboxes(){
     }
 }
 
-void* adder(void* arg){
-    int id = (int) arg;
-    int sum = 0;
-    int numOps = 0;
-    sem_wait(&sems[id]); // wait till signalled
-    while(true){
-        msg newMsg;
-        recvMsg(id, newMsg);
-        if(newMsg.value >= 0) {
-            sum += newMsg.value;
-            numOps++;
-            sleep(1);
-        } else {
-            cout << "The result from thread " << id << " is " << sum << " from " << numOps << " operations during " << time() << " secs.";
-            exit(0);
-        }
-    }
-}
-
-void sendMsg(int iTo, struct msg &Msg){
-    if(mailboxes[iTo] != NULL){
-        sem_wait(sems[iTo]);
-    } else {
-        mailboxes[iTo] = Msg;
-        sem_post(sems[iTo]);
-    }
-}
-
-void recvMsg(int iRecv, struct msg &Msg){
-    if(mailboxes[iRecv] == NULL){
-        sem_wait(sems[iRecv]);
-    }else {
-        Msg.value = mailboxes[iRecv];
-        mailboxes[iRecv] = NULL;
-        sem_post(sems[iRecv]);
+void killAll(){
+    for(int i = 1; i < MAXTHREAD+1; i++){
+        (void) pthread_join(threadIds[i],NULL);
+        (void) sem_destroy(&sems[i]);
     }
 }
 
@@ -92,12 +114,17 @@ int main(int argc, char* argv[]) {
     while(true){
         int value;
         int sendTo;
-        cin << value << sendTo;
+        cin >> value >> sendTo;
+//        cout << value << " " << sendTo;
+//        cout.flush();
         if(cin.fail()){
-            // End everything
+            killAll();
             exit(0);
         }
-        sendMsg(sendTo, value);
+        msg newMsg;
+        newMsg.value = value;
+        newMsg.iFrom = 0;
+        sendMsg(sendTo, newMsg);
     }
     return 0;
 }
