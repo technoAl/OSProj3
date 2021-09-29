@@ -20,69 +20,62 @@ struct msg {
 
 msg *mailboxes;
 pthread_t *threadIds;
-sem_t *sems;
+sem_t *cSems;
+sem_t *pSems;
 
 /* g++ -o pcthreads pcthreads.C -lpthread */
 #define REQUEST 1
 #define REPLY 2
 int MAXTHREAD;
 
-void sendMsg(int iTo, struct msg &Msg){
-    if(mailboxes[iTo].cnt == 0){  // New message so block
-        sem_wait(&sems[iTo]);
-    } else { // Old Message so replace
-        cout << iTo;
-        Msg.cnt = 0;
-        mailboxes[iTo] = Msg;
-        sem_post(&sems[iTo]);
-    }
+void sendMsg(int iTo, struct msg &Msg) {
+    sem_wait(&pSems[iTo]);
+
+    mailboxes[iTo] = Msg;
+
+    sem_post(&cSems[iTo]);
 }
 
-void recvMsg(int iRecv, struct msg &Msg){
-    if(mailboxes[iRecv].cnt != 0){ // Old message so empty mailbox
-        sem_wait(&sems[iRecv]);
-    }else { // New message so receive and mark as old
-        Msg.value = mailboxes[iRecv].value;
-        mailboxes[iRecv] = Msg;
-        mailboxes[iRecv].cnt = 1;
-        //sem_post(&sems[iRecv]);
-    }
+void recvMsg(int iRecv, struct msg &Msg) {
+    sem_wait(&cSems[iRecv]);
+
+    Msg.value = mailboxes[iRecv].value;
+    mailboxes[iRecv] = Msg;
+
+    sem_post(&pSems[iRecv]);
 }
 
 void* adder(void* arg){
     int id = (long) arg;
     int sum = 0;
     int numOps = 0;
-//    cout << "init";
-//    cout.flush();
-    sem_wait(&sems[id]); // wait till signalled
+
     while(true){
-        cout << "posted";
-        cout.flush();
         msg newMsg;
         recvMsg(id, newMsg);
-        cout << "received";
-        cout.flush();
-        cout.flush();
         if(newMsg.value >= 0) {
             sum += newMsg.value;
             numOps++;
             cout << "sum: " << sum;
             sleep(1);
         } else {
-            cout << "The result from thread " << id << " is " << sum << " from " << numOps << " operations during " << time(NULL) << " secs.";
+            msg newMsg = malloc(sizeof msg);
+            newMsg.iFrom = id;
+            newMsg.cnt = numOps;
+            newMsg.tot = sum;
+            sendMsg(0, newMsg);
             exit(0);
         }
     }
 }
 
 void initMailboxes(){
-    for(int i = 1; i < MAXTHREAD+1; i++){
-        mailboxes[i].cnt = 1;
-    }
-
-    for(int i = 1; i < MAXTHREAD+1; i++){
-        if (sem_init(&sems[i], 0, 0) < 0) {
+    for(int i = 0; i < MAXTHREAD+1; i++){
+        if (sem_init(&cSems[i], 0, 0) < 0) {
+            perror("sem_init");
+            exit(1);
+        }
+        if (sem_init(&pSems[i], 0, 1) < 0) {
             perror("sem_init");
             exit(1);
         }
@@ -97,9 +90,12 @@ void initMailboxes(){
 }
 
 void killAll(){
+    (void) sem_destroy(&cSems[0]);
+    (void) sem_destroy(&pSems[0]);
     for(int i = 1; i < MAXTHREAD+1; i++){
         (void) pthread_join(threadIds[i],NULL);
-        (void) sem_destroy(&sems[i]);
+        (void) sem_destroy(&cSems[i]);
+        (void) sem_destroy(&pSems[i]);
     }
 }
 
@@ -107,7 +103,8 @@ int main(int argc, char* argv[]) {
     MAXTHREAD = atoi(argv[1]);
     mailboxes = new msg[MAXTHREAD+1];
     threadIds = new pthread_t[MAXTHREAD+1];
-    sems = new sem_t[MAXTHREAD+1];
+    pSems = new sem_t[MAXTHREAD+1];
+    cSems = new sem_t[MAXTHREAD+1];
 
     initMailboxes();
 
@@ -125,6 +122,11 @@ int main(int argc, char* argv[]) {
         newMsg.value = value;
         newMsg.iFrom = 0;
         sendMsg(sendTo, newMsg);
+        if(value < 0){
+            recvMsg(0, newMsg);
+            cout << "The result from thread " << newMsg.iFrom << " is " << newMsg.tot << " operations during " << time(NULL) << " secs.";
+        }
+
     }
     return 0;
 }
