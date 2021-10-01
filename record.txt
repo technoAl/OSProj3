@@ -1,0 +1,55 @@
+Script started on 2021-09-30 22:54:11-04:00 [TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="80" LINES="24"]
+[?2004h]0;alexander@alexander-VirtualBox: ~/Desktop/OSProj3[01;32malexander@alexander-VirtualBox[00m:[01;34m~/Desktop/OSProj3[00m$ ./proj3 3
+[?2004l3 1
+4 2
+6 1
+5 1
+7 3
+9 2
+The result from thread 1 is 14 from 3 operations during 3 secs.
+The result from thread 3 is 7 from 1 operations during 1 secs.
+The result from thread 2 is 13 from 2 operations during 2 secs.
+[?2004h]0;alexander@alexander-VirtualBox: ~/Desktop/OSProj3[01;32malexander@alexander-VirtualBox[00m:[01;34m~/Desktop/OSProj3[00m$ ./proj3 3
+[?2004l3 1
+4 2
+6 1
+5 1
+7 3
+9 2
+-1 1
+The result from thread 1 is 14 from 3 operations during 3 secs.
+-1 2
+The result from thread 2 is 13 from 2 operations during 2 secs.
+-1 3
+The result from thread 3 is 7 from 1 operations during 1 secs.
+[?2004h]0;alexander@alexander-VirtualBox: ~/Desktop/OSProj3[01;32malexander@alexander-VirtualBox[00m:[01;34m~/Desktop/OSProj3[00m$ ./proj3 3 nb
+[?2004l3 1
+4 2
+6 1
+5 1
+7 3
+9 2failed to send msg to 1 putting it in queue
+The result from thread 3 is 7 from 1 operations during 1 secs.
+The result from thread 2 is 13 from 2 operations during 2 secs.
+The result from thread 1 is 14 from 3 operations during 3 secs.
+[?2004h]0;alexander@alexander-VirtualBox: ~/Desktop/OSProj3[01;32malexander@alexander-VirtualBox[00m:[01;34m~/Desktop/OSProj3[00m$ ./proj3 3 nb
+[?2004l3 1
+3 1
+3 1
+3 1
+3 1
+3 1
+3 1
+3 1failed to send msg to 1 putting it in queue
+failed to send msg to 1 putting it in queue
+failed to send msg to 1 putting it in queue
+failed to send msg to 1 putting it in queue
+failed to send msg to 1 putting it in queue
+failed to send msg to 1 putting it in queue
+The result from thread 2 is 0 from 0 operations during 0 secs.
+The result from thread 3 is 0 from 0 operations during 0 secs.
+The result from thread 1 is 24 from 8 operations during 8 secs.
+[?2004h]0;alexander@alexander-VirtualBox: ~/Desktop/OSProj3[01;32malexander@alexander-VirtualBox[00m:[01;34m~/Desktop/OSProj3[00m$ scip[K[K[K[Kexit
+[?2004lexit
+
+Script done on 2021-09-30 22:58:56-04:00 [COMMAND_EXIT_CODE="0"]
